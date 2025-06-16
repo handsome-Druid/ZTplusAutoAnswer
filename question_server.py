@@ -139,5 +139,5 @@ if __name__ == '__main__':
     init_db()
     print("Loading data from JSON to database...")
     load_json_to_db()
-    print("Starting Flask server on http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    print("Starting Flask server on http://localhost:8880")
+    app.run(host='0.0.0.0', port=8880, debug=False)

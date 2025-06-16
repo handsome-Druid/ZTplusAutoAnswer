@@ -1,4 +1,15 @@
-# ZTplus 自动答题助手
+# ZTplusAutoAnswer（Fork 自 Moeary/ZTplusAutoAnswer）
+
+本项目基于 [Moeary/ZTplusAutoAnswer](https://github.com/Moeary/ZTplusAutoAnswer) fork 修改，已获得原作者许可进行修改与发布。
+
+本项目使用 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html) 进行许可。详情见 LICENSE 文件。
+
+更新内容：
+ - 修复了点击“开始测试”按钮跳转到考试页面后，自动答题助手控制面板未自动弹出的问题。现在点击“开始测试”按钮后，控制面板会自动弹出。
+ - 本项目默认已内置服务端，仅进行客户端配置即可使用，无需额外配置服务端。
+
+#### 开源代码仅供学习交流使用，默认的服务端题量有限，且不会长期支持。若有进一步使用需求，请自行使用CollectQuestion.js脚本收集题目，并自行搭建服务端。
+#### 默认服务端走海外的流量，如果确认应有的题库却搜不出来，那就是没连上服务器，请自己想办法。服务器性能较弱且带宽较小，如果无论如何都无法连接，可以等一会再使用，或者联系我。
 
 这是一个用于 ZTplus 在线教育平台的自动答题助手项目，包含练习题收集、题库服务器和自动答题功能。
 
@@ -13,38 +24,61 @@
 ### 数据库文件
 - **`question_bank.db`** - SQLite 题库数据库（自动生成）
 
-## 🚀 快速开始
+# 🚀 快速开始
 
-### 1. 安装依赖
+## 客户端配置
 
-确保你的系统已安装：
-- **Python 3.7+**
-- **Tampermonkey 浏览器扩展**
+1. 打开 Tampermonkey 管理页面
+2. 点击"添加新脚本"
+3. 将对应的 `.js` 文件内容复制粘贴进去
+4. 修改`SERVER_URL`
+5. 保存脚本
 
-安装 Python 依赖：
+### 或者
+
+`https://greasyfork.org/zh-CN/scripts/539590-ztplus%E8%87%AA%E5%8A%A8%E7%AD%94%E9%A2%98%E5%8A%A9%E6%89%8B-%E6%B5%8B%E8%AF%95%E9%A2%98%E4%B8%93%E7%94%A8`
+
+
+## 服务端配置
+
+### 1. 部署环境
+
+
+在全新 Ubuntu 24.04.2 LTS 系统下，推荐如下命令安装依赖：
 ```bash
-pip install flask flask-cors sqlite3
+sudo -i
+apt update && apt dist-upgrade -y && apt install python3 pip -y && apt install python3-flask python3-flask-cors sqlite3 -y
+
+```
+
+或者使用Dockerfile全新构建环境（自行安装docker），在项目目录下运行：
+```bash
+ docker buildx build -t ztplus . --load
+ ```
+
+或者直接拉取docker镜像：
+```bash
+docker pull cooldruid256/ztplus:latest
 ```
 
 ### 2. 启动题库服务器
 
 在项目目录下运行：
 ```bash
-python question_server.py
+python3 question_server.py
 ```
 
-服务器将在 `http://localhost:5000` 启动，并自动扫描当前目录下的所有 JSON 题库文件。
+或者使用docker运行：
+```bash
+docker run -d -p 8880:8880 cooldruid256/ztplus:latest
+```
 
-### 3. 安装油猴脚本
+服务器将在 `http://localhost:8880` 启动，并自动扫描当前目录下的所有 JSON 题库文件。
 
-1. 打开 Tampermonkey 管理页面
-2. 点击"添加新脚本"
-3. 将对应的 `.js` 文件内容复制粘贴进去
-4. 保存脚本
 
 ## 📚 脚本功能详解
 
-### 练习题脚本 (`1.js`)
+### 练习题脚本 (`CollectQuestion.js`)
 
 **适用场景：** 练习模式，用于收集题库和简单答题
 
@@ -67,7 +101,7 @@ python question_server.py
 - 导出题库数据
 - 清除缓存数据
 
-### 测试题脚本 (`2.js`)
+### 测试题脚本 (`AutoAnswer.js`)
 
 **适用场景：** 正式考试，利用题库智能答题
 
@@ -135,7 +169,7 @@ Total questions imported: 500
 Total questions skipped: 0
 Data loading complete.
 
-Starting Flask server on http://localhost:5000
+Starting Flask server on http://localhost:8880
 ```
 
 ## 🎮 使用流程
@@ -164,7 +198,7 @@ const CONFIG = {
 ```
 
 ### 服务器配置 (`question_server.py`)
-- 端口：5000
+- 端口：8880
 - 数据库：SQLite (`question_bank.db`)
 - 支持 CORS 跨域请求
 
@@ -199,9 +233,9 @@ JSON 题库文件格式：
 - 查看浏览器控制台错误信息
 
 **2. 题库服务器连接失败**
-- 确认服务器正在运行（`http://localhost:5000/status`）
+- 确认服务器正在运行（`http://localhost:8880/status`）
 - 检查防火墙设置
-- 确认没有其他程序占用 5000 端口
+- 确认没有其他程序占用 8880 端口
 
 **3. 答题速度过快被检测**
 - 增加 `CONFIG.ANSWER_DELAY_MIN` 和 `CONFIG.ANSWER_DELAY_MAX` 的值
@@ -219,8 +253,8 @@ JSON 题库文件格式：
 
 2. **测试题库服务器**
    ```bash
-   curl "http://localhost:5000/status"
-   curl "http://localhost:5000/query?term=职业道德"
+   curl "http://localhost:8880/status"
+   curl "http://localhost:8880/query?term=职业道德"
    ```
 
 3. **检查脚本状态**

@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         自动答题助手（测试题专用）
-// @namespace    http://tampermonkey.net/
+// @namespace    https://greasyfork.org/users/100156-handsomedruid
 // @version      1.1
 // @description  自动从题库查询答案并选择（支持判断题、单选题、多选题的批量处理）
-// @author       Copilot
+// @author       Moeary & handsomeDruid
+// @license      GPL-3.0
 // @match        *://www.ztplus.cn/pc/index.html*
 // @match        *://ztplus.cn/pc/index.html*
 // @grant        GM_getValue
@@ -12,12 +13,12 @@
 // @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     // 配置参数
     const CONFIG = {
-        SERVER_URL: 'http://localhost:5000/query',
+        SERVER_URL: 'https://tgwskk.ccuqso.workers.dev/query', //请修改这里
         ANSWER_DELAY_MIN: 200,  // 最小答题间隔(毫秒)
         ANSWER_DELAY_MAX: 400,  // 最大答题间隔(毫秒)
         RETRY_DELAY: 100,       // 重试间隔
@@ -86,7 +87,7 @@
     function updatePanelStatus(status, progress = null) {
         const statusEl = document.getElementById('panel-status');
         const progressEl = document.getElementById('panel-progress');
-        
+
         if (statusEl) statusEl.innerHTML = `状态: ${status}`;
         if (progressEl && progress) {
             progressEl.innerHTML = `进度: ${progress.current}/${progress.total} | 正确: ${progress.correct}`;
@@ -95,27 +96,27 @@
     function getAllQuestions() {
         const questions = [];
         const questionElements = document.querySelectorAll('.sub-content[data-v-a98933d6]');
-        
+
         console.log(`找到 ${questionElements.length} 个题目元素`);
-        
+
         questionElements.forEach((element, index) => {
             try {
                 // 提取题目文本
                 const questionP = element.querySelector('p[id^="question_"]');
                 if (!questionP) return;
-                
+
                 let questionText = questionP.textContent.trim();
                 // 移除题号 (如 "1. ")
                 questionText = questionText.replace(/^\d+\.\s*/, '');
-                
+
                 // 检测题目类型并提取选项
                 const radioLabels = element.querySelectorAll('.el-radio__label');
                 const checkboxLabels = element.querySelectorAll('.el-checkbox__label');
-                
+
                 let questionType = 'unknown';
                 let options = [];
                 let inputs = [];
-                
+
                 if (radioLabels.length > 0) {
                     // 单选题 (判断题、单选题)
                     questionType = 'radio';
@@ -131,7 +132,7 @@
                     });
                     inputs = Array.from(element.querySelectorAll('input[type="checkbox"]'));
                 }
-                
+
                 questions.push({
                     index: index + 1,
                     element: element,
@@ -141,13 +142,13 @@
                     inputs: inputs,
                     answered: false
                 });
-                
+
                 console.log(`题目 ${index + 1} (${questionType}): ${questionText.substring(0, 50)}...`);
             } catch (error) {
                 console.error(`解析题目 ${index + 1} 时出错:`, error);
             }
         });
-        
+
         return questions;
     }
 
@@ -155,14 +156,14 @@
     function queryQuestionBank(questionText) {
         return new Promise((resolve) => {
             const url = `${CONFIG.SERVER_URL}?term=${encodeURIComponent(questionText)}`;
-            
+
             console.log(`查询题库: ${questionText.substring(0, 50)}...`);
-            
+
             GM_xmlhttpRequest({
                 method: 'GET',
                 url: url,
                 timeout: 5000,
-                onload: function(response) {
+                onload: function (response) {
                     try {
                         if (response.status === 200) {
                             const data = JSON.parse(response.responseText);
@@ -183,11 +184,11 @@
                         resolve(null);
                     }
                 },
-                onerror: function(error) {
+                onerror: function (error) {
                     console.error('请求题库失败:', error);
                     resolve(null);
                 },
-                ontimeout: function() {
+                ontimeout: function () {
                     console.error('请求题库超时');
                     resolve(null);
                 }
@@ -213,7 +214,7 @@
     // 选择单选题答案
     function selectRadioAnswer(question, answer) {
         let selectedInput = null;
-        
+
         if (answer === 'A' || answer === '正确') {
             selectedInput = question.inputs[0];
         } else if (answer === 'B' || answer === '错误') {
@@ -231,26 +232,26 @@
                 }
             }
         }
-        
+
         // 如果没找到匹配的答案，默认选择A
         if (!selectedInput) {
             console.log('未找到匹配答案，默认选择A');
             selectedInput = question.inputs[0];
         }
-        
+
         if (selectedInput) {
             // 模拟点击
             selectedInput.click();
-            
+
             // 触发change事件
             const event = new Event('change', { bubbles: true });
             selectedInput.dispatchEvent(event);
-            
+
             question.answered = true;
             console.log(`已选择单选答案: ${answer} (题目 ${question.index})`);
             return true;
         }
-        
+
         return false;
     }
 
@@ -258,7 +259,7 @@
     function selectCheckboxAnswer(question, answer) {
         // 解析多选答案，如 "ABC", "ABCD", "BD" 等
         const selectedOptions = [];
-        
+
         // 如果答案包含多个字母，解析每个字母
         if (answer && answer.length > 1 && /^[A-Z]+$/.test(answer)) {
             for (let char of answer) {
@@ -271,35 +272,35 @@
             console.log('无法解析多选答案，默认选择A');
             selectedOptions.push('A');
         }
-        
+
         console.log(`解析多选答案: ${answer} -> ${selectedOptions.join(',')}`);
-        
+
         let successCount = 0;
-        
+
         // 选择对应的选项
         selectedOptions.forEach(option => {
             let optionIndex = -1;
-            
-            switch(option) {
+
+            switch (option) {
                 case 'A': optionIndex = 0; break;
                 case 'B': optionIndex = 1; break;
                 case 'C': optionIndex = 2; break;
                 case 'D': optionIndex = 3; break;
-                default: 
+                default:
                     console.warn(`未识别的选项: ${option}`);
                     return;
             }
-            
+
             if (optionIndex >= 0 && optionIndex < question.inputs.length) {
                 const input = question.inputs[optionIndex];
                 if (input && !input.checked) {
                     // 模拟点击复选框
                     input.click();
-                    
+
                     // 触发change事件
                     const event = new Event('change', { bubbles: true });
                     input.dispatchEvent(event);
-                    
+
                     successCount++;
                     console.log(`已选择多选选项: ${option} (索引 ${optionIndex})`);
                 } else if (input && input.checked) {
@@ -310,13 +311,13 @@
                 console.warn(`选项索引超出范围: ${option} (索引 ${optionIndex})`);
             }
         });
-        
+
         if (successCount > 0) {
             question.answered = true;
             console.log(`已完成多选题答题: ${answer} (题目 ${question.index}), 成功选择 ${successCount} 个选项`);
             return true;
         }
-        
+
         return false;
     }
 
@@ -329,54 +330,54 @@
     // 开始自动答题
     async function startAutoAnswer() {
         if (isRunning) return;
-        
+
         isRunning = true;
         document.getElementById('start-btn').disabled = true;
         document.getElementById('stop-btn').disabled = false;
-        
+
         updatePanelStatus('正在扫描页面题目...');
-        
+
         const questions = getAllQuestions();
         totalQuestions = questions.length;
         currentQuestionIndex = 0;
         answeredCount = 0;
         correctCount = 0;
-        
+
         if (totalQuestions === 0) {
             updatePanelStatus('未找到题目，请确认页面已完全加载');
             stopAutoAnswer();
             return;
         }
-        
+
         updatePanelStatus(`找到 ${totalQuestions} 个题目，开始答题...`);
-        
+
         for (let i = 0; i < questions.length && isRunning; i++) {
             const question = questions[i];
             currentQuestionIndex = i + 1;
-            
+
             updatePanelStatus(`正在处理第 ${currentQuestionIndex} 题...`, {
                 current: currentQuestionIndex,
                 total: totalQuestions,
                 correct: correctCount
             });
-            
+
             // 滚动到当前题目
             question.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
+
             await randomDelay();
-            
+
             if (!isRunning) break;
-            
+
             // 查询答案
             const answer = await queryQuestionBank(question.questionText);
-            
+
             if (!isRunning) break;
-            
+
             // 选择答案
             if (selectAnswer(question, answer)) {
                 answeredCount++;
                 if (answer) correctCount++;
-                
+
                 updatePanelStatus(`已完成第 ${currentQuestionIndex} 题`, {
                     current: currentQuestionIndex,
                     total: totalQuestions,
@@ -389,13 +390,13 @@
                     correct: correctCount
                 });
             }
-            
+
             // 题目间隔
             if (i < questions.length - 1) {
                 await randomDelay();
             }
         }
-        
+
         if (isRunning) {
             updatePanelStatus(`答题完成！共 ${totalQuestions} 题，已答 ${answeredCount} 题`, {
                 current: totalQuestions,
@@ -403,7 +404,7 @@
                 correct: correctCount
             });
         }
-        
+
         stopAutoAnswer();
     }
 
@@ -412,7 +413,7 @@
         isRunning = false;
         document.getElementById('start-btn').disabled = false;
         document.getElementById('stop-btn').disabled = true;
-        
+
         if (currentQuestionIndex > 0) {
             updatePanelStatus('已停止答题');
         }
@@ -420,8 +421,8 @@
 
     // 检查是否为测试页面
     function isTestPage() {
-        return window.location.href.includes('/paper/testing/') || 
-               document.querySelector('.sub-content[data-v-a98933d6]');
+        return window.location.href.includes('/paper/testing/') ||
+            document.querySelector('.sub-content[data-v-a98933d6]');
     }
 
     // 初始化
@@ -430,9 +431,9 @@
             console.log('当前不是测试页面，脚本不会运行');
             return;
         }
-        
+
         console.log('检测到测试页面，初始化自动答题助手...');
-        
+
         // 等待页面完全加载
         setTimeout(() => {
             createControlPanel();
@@ -447,4 +448,15 @@
         init();
     }
 
+    // 监听 hash 变化，适配 SPA 路由切换
+    let lastUrl = location.href;
+    function checkUrlChange() {
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            init();
+        }
+    }
+    setInterval(checkUrlChange, 500); // 每 500ms 检查一次 URL
+
+    window.addEventListener('hashchange', init, false);
 })();
