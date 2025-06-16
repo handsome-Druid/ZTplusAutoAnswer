@@ -36,7 +36,7 @@
 
 ### 或者
 
-`https://greasyfork.org/zh-CN/scripts/539590-ztplus%E8%87%AA%E5%8A%A8%E7%AD%94%E9%A2%98%E5%8A%A9%E6%89%8B-%E6%B5%8B%E8%AF%95%E9%A2%98%E4%B8%93%E7%94%A8`
+[Greasyfork](https://greasyfork.org/zh-CN/scripts/539590-ztplus%E8%87%AA%E5%8A%A8%E7%AD%94%E9%A2%98%E5%8A%A9%E6%89%8B-%E6%B5%8B%E8%AF%95%E9%A2%98%E4%B8%93%E7%94%A8)
 
 
 ## 服务端配置
